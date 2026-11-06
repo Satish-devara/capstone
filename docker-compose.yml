@@ -1,0 +1,39 @@
+version: '3.9'
+
+services:
+
+  backend:
+    build: ./backend
+    container_name: diabetes_backend
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=production
+      - DATABASE_URL=sqlite:///predictions.db
+      - CORS_ORIGIN=http://localhost:3000
+      - MODEL_DIR=/app/saved_models/
+    volumes:
+      - ./backend/data:/app/data           # Mount dataset directory
+      - model_cache:/app/saved_models      # Persist trained models across restarts
+      - db_data:/app/instance              # Persist SQLite database
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  frontend:
+    build: ./frontend
+    container_name: diabetes_frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  model_cache:
+  db_data:
+
